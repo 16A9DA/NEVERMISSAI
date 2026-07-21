@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import User
 from app.deps import get_current_user, get_db
 from app.pipeline.orchestrator import CallPipeline
-from app.voice.transport.mock_transport import DEMO_SCRIPTS, ScriptedMockTransport
+from dev.mock_transport import DEMO_SCRIPTS, ScriptedMockTransport
 
 router = APIRouter(prefix="/demo", tags=["demo"])
 

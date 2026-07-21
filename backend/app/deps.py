@@ -66,10 +66,7 @@ async def get_current_user_id_ws(token: str | None = None) -> str:
     return decode_clerk_token(token)
 
 
-async def get_current_user(
-    clerk_user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-) -> User:
+async def _get_or_create_user(clerk_user_id: str, db: AsyncSession) -> User:
     result = await db.execute(select(User).where(User.clerk_user_id == clerk_user_id))
     user = result.scalar_one_or_none()
     if user is None:
@@ -78,3 +75,17 @@ async def get_current_user(
         await db.commit()
         await db.refresh(user)
     return user
+
+
+async def get_current_user(
+    clerk_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    return await _get_or_create_user(clerk_user_id, db)
+
+
+async def get_current_user_from_query(
+    clerk_user_id: str = Depends(get_current_user_id_ws),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    return await _get_or_create_user(clerk_user_id, db)

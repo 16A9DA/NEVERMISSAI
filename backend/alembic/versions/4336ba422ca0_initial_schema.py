@@ -75,15 +75,13 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "calendar_events",
+        "google_calendar_accounts",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("title", sa.String, nullable=False),
-        sa.Column("start_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("end_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("location", sa.String, nullable=True),
-        sa.Column("source", sa.String, nullable=False, server_default="ai_created"),
-        sa.Column("related_call_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("calls.id"), nullable=True),
+        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False, unique=True),
+        sa.Column("google_email", sa.String, nullable=False),
+        sa.Column("access_token_encrypted", sa.Text, nullable=False),
+        sa.Column("refresh_token_encrypted", sa.Text, nullable=False),
+        sa.Column("token_expiry", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
@@ -144,7 +142,7 @@ def downgrade() -> None:
     op.drop_table("call_summaries")
     op.drop_table("call_transcripts")
     op.drop_table("call_events")
-    op.drop_table("calendar_events")
+    op.drop_table("google_calendar_accounts")
     op.drop_table("calls")
     op.drop_table("memory_profile")
     op.drop_table("permission_rules")

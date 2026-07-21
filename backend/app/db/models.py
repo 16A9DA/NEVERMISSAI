@@ -61,17 +61,15 @@ class MemoryProfile(Base):
     value_json: Mapped[dict] = mapped_column(JSONB, default=dict)
 
 
-class CalendarEvent(Base):
-    __tablename__ = "calendar_events"
+class GoogleCalendarAccount(Base):
+    __tablename__ = "google_calendar_accounts"
 
     id: Mapped[uuid.UUID] = uuid_pk()
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    title: Mapped[str] = mapped_column(String)
-    start_at: Mapped[datetime] = mapped_column()
-    end_at: Mapped[datetime] = mapped_column()
-    location: Mapped[str] = mapped_column(String, nullable=True)
-    source: Mapped[str] = mapped_column(String, default="ai_created")  # ai_created|manual
-    related_call_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("calls.id"), nullable=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), unique=True)
+    google_email: Mapped[str] = mapped_column(String)
+    access_token_encrypted: Mapped[str] = mapped_column(Text)
+    refresh_token_encrypted: Mapped[str] = mapped_column(Text)
+    token_expiry: Mapped[datetime] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 

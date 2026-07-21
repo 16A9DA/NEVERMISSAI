@@ -18,6 +18,7 @@ class CallContext:
     transcript: list[TranscriptTurn] = field(default_factory=list)
     caller_id_result: dict | None = None
     intent: dict | None = None
+    action: dict | None = None
     urgency_score: int | None = None
     urgency_bucket: str | None = None
     scam_score: int | None = None

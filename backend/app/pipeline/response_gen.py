@@ -1,6 +1,8 @@
 from app.llm.base import LLMClient
 from app.pipeline.context import CallContext
 
+GOODBYE_PHRASE = "Thank you for calling. Have a great day."
+
 
 async def generate_response(llm: LLMClient, context: CallContext, action_summary: str | None) -> str:
     permission_notes = "\n".join(
@@ -16,9 +18,9 @@ async def generate_response(llm: LLMClient, context: CallContext, action_summary
         "[date] at [time], correct?\" — adapt the verb (book/reschedule/cancel) to the action, and "
         "wait for the caller's yes before treating it as done.\n\n"
         "If the caller's last line is just a closing remark (thanks, ok, bye, that's all) and "
-        "nothing new is being asked or corrected, reply with exactly: \"Thank you for calling. Have "
-        "a great day.\" — nothing before or after it, and never repeat a line you already said "
-        "earlier in this transcript verbatim.\n\n"
+        f"nothing new is being asked or corrected, reply with exactly: \"{GOODBYE_PHRASE}\" — nothing "
+        "before or after it, and never repeat a line you already said earlier in this transcript "
+        "verbatim.\n\n"
         f"Caller identified as: {context.caller_id_result}\n"
         f"Detected intent: {context.intent}\n"
         f"Permission decisions this call:\n{permission_notes or '(none yet)'}\n"

@@ -6,6 +6,7 @@ class EventType(StrEnum):
     TRANSCRIPT_CHUNK = "transcript_chunk"
     CALLER_IDENTIFIED = "caller_identified"
     INTENT_DETECTED = "intent_detected"
+    ACTION_DETECTED = "action_detected"
     URGENCY_UPDATED = "urgency_updated"
     SCAM_SCORE_UPDATED = "scam_score_updated"
     MEMORY_LOOKUP = "memory_lookup"

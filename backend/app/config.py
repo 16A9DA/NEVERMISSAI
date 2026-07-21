@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     CLERK_SECRET_KEY: str = ""
     CLERK_JWKS_URL: str = ""
 
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
+    TOKEN_ENCRYPTION_KEY: str = ""
+    FRONTEND_URL: str = "http://localhost:3000"
+
     ENV: Literal["dev", "prod"] = "dev"
 
 

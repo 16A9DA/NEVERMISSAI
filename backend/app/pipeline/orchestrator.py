@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Call, CallEvent, CallTranscript
 from app.llm.factory import get_llm_client
-from app.pipeline import caller_id, intent as intent_stage, response_gen, summary
+from app.pipeline import action_extraction, caller_id, intent as intent_stage, response_gen, summary
+from app.pipeline.response_gen import GOODBYE_PHRASE
 from app.pipeline.actions import cancel_calendar_event, create_calendar_event, reschedule_calendar_event
 from app.pipeline.context import CallContext, TranscriptTurn
 from app.voice.factory import get_stt, get_tts
@@ -27,7 +28,7 @@ class CallPipeline:
         self._llm = get_llm_client()
         self._stt = get_stt()
         self._tts = get_tts()
-        self._last_event_id: uuid.UUID | None = None
+        self._last_event_id: str | None = None
 
     async def _emit(self, call_id: str, event_type: EventType, payload: dict) -> None:
         self._db.add(CallEvent(call_id=uuid.UUID(call_id), event_type=event_type.value, payload_json=payload))
@@ -54,7 +55,9 @@ class CallPipeline:
                 audio = await self._transport.next_caller_turn()
                 if audio is None:
                     break
-                await self._handle_caller_turn(call_row, context, audio)
+                said_goodbye = await self._handle_caller_turn(call_row, context, audio)
+                if said_goodbye:
+                    break
             await self._finish_call(call_row, context)
         except Exception:
             call_row.status = "disconnected"
@@ -76,7 +79,7 @@ class CallPipeline:
 
         await self._transport.send_ai_turn(_tts_chunks())
 
-    async def _handle_caller_turn(self, call_row: Call, context: CallContext, audio: bytes) -> None:
+    async def _handle_caller_turn(self, call_row: Call, context: CallContext, audio: bytes) -> bool:
         call_id = context.call_id
         lang = "en"
 
@@ -100,8 +103,9 @@ class CallPipeline:
             else None
         )
         intent_task = intent_stage.detect_intent(self._llm, context.transcript_text())
+        action_task = action_extraction.detect_action(self._llm, context.transcript_text())
         if caller_id_task is not None:
-            result, intent_result = await asyncio.gather(caller_id_task, intent_task)
+            result, intent_result, action_result = await asyncio.gather(caller_id_task, intent_task, action_task)
             context.caller_id_result = result
             call_row.caller_id_result_json = result
             if result.get("contact_id"):
@@ -109,12 +113,14 @@ class CallPipeline:
             await self._db.commit()
             await self._emit(call_id, EventType.CALLER_IDENTIFIED, result)
         else:
-            intent_result = await intent_task
+            intent_result, action_result = await asyncio.gather(intent_task, action_task)
         context.intent = intent_result
+        context.action = action_result
         call_row.intent_json = intent_result
         await self._db.commit()
         await self._emit(call_id, EventType.INTENT_DETECTED, intent_result)
-        print(f"[pipeline {call_id}] intent: {intent_result}", flush=True)
+        await self._emit(call_id, EventType.ACTION_DETECTED, action_result)
+        print(f"[pipeline {call_id}] intent: {intent_result} action: {action_result}", flush=True)
 
         action_summary = await self._maybe_handle_appointment_action(context)
 
@@ -131,6 +137,7 @@ class CallPipeline:
 
         await self._transport.send_ai_turn(_tts_chunks())
         print(f"[pipeline {call_id}] AI audio sent", flush=True)
+        return reply_text.strip() == GOODBYE_PHRASE
 
     async def _extract_meeting_slot(self, context: CallContext) -> tuple[datetime, datetime] | None:
         now = datetime.now(timezone.utc)
@@ -163,21 +170,23 @@ class CallPipeline:
 
     async def _maybe_handle_appointment_action(self, context: CallContext) -> str | None:
         intent = context.intent.get("intent") if context.intent else None
+        caller_action = context.action.get("action") if context.action else None
+        appointment_context = intent in ("interview", "appointment")
 
-        if intent in ("interview", "appointment"):
+        if caller_action == "book" and appointment_context:
             slot = await self._extract_meeting_slot(context)
             if slot is None:
                 return None
             start_at, end_at = slot
             title = f"{intent.replace('_', ' ').title()} — {context.caller_id_result.get('name') or context.caller_number}"
             decision, event = await create_calendar_event(self._db, context, title, start_at, end_at)
-            action = "schedule_meetings"
+            permission_action = "schedule_meetings"
             ok_summary = f"scheduled '{title}' at {start_at.isoformat()}"
             fail_summary = f"could not schedule meeting: {decision.reason}"
             if event:
-                self._last_event_id = uuid.UUID(event["id"])
+                self._last_event_id = event["id"]
 
-        elif intent == "reschedule_appointment":
+        elif caller_action == "reschedule":
             if self._last_event_id is None:
                 return None
             slot = await self._extract_meeting_slot(context)
@@ -187,18 +196,18 @@ class CallPipeline:
             decision, event = await reschedule_calendar_event(
                 self._db, context, self._last_event_id, start_at, end_at
             )
-            action = "schedule_meetings"
+            permission_action = "schedule_meetings"
             ok_summary = f"rescheduled to {start_at.isoformat()}"
             fail_summary = f"could not reschedule meeting: {decision.reason}"
 
-        elif intent == "cancel_appointment":
+        elif caller_action == "cancel":
             if self._last_event_id is None:
                 return None
             decision = await cancel_calendar_event(self._db, context, self._last_event_id)
             # ponytail: no CALENDAR_UPDATED removal event, live dashboard keeps stale
             # entry until next fetch; add a calendar_removed WS event if live removal matters
             event = None
-            action = "schedule_meetings"
+            permission_action = "schedule_meetings"
             ok_summary = "cancelled meeting"
             fail_summary = f"could not cancel meeting: {decision.reason}"
             if decision.allowed:
@@ -210,7 +219,7 @@ class CallPipeline:
         await self._emit(
             context.call_id,
             EventType.ACTION_EXECUTED,
-            {"action": action, "allowed": decision.allowed, "reason": decision.reason},
+            {"action": permission_action, "allowed": decision.allowed, "reason": decision.reason},
         )
         if not decision.allowed:
             return fail_summary

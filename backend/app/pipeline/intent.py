@@ -1,8 +1,8 @@
 from app.llm.base import LLMClient
 
 INTENT_TYPES = [
-    "interview", "delivery", "appointment", "reschedule_appointment", "cancel_appointment",
-    "emergency", "spam", "support", "sales", "fraud", "personal", "business",
+    "interview", "delivery", "appointment", "support", "information",
+    "emergency", "spam", "sales", "fraud", "personal", "business",
 ]
 
 _SCHEMA = {"intent": "string", "confidence": "number"}

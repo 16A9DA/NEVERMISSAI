@@ -44,7 +44,7 @@ export interface ActionEvent {
 export interface CalendarEventPayload {
   id: string;
   title: string;
+  description?: string | null;
   start_at: string;
   end_at: string;
-  location: string | null;
 }
