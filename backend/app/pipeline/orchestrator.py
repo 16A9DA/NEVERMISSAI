@@ -1,16 +1,4 @@
-"""CallPipeline — the literal implementation of the spec's workflow:
-
-Incoming Call -> Identify Caller -> Check Contact DB -> Detect Intent ->
-Estimate Urgency -> Run Scam Detection -> Consult Personal Memory ->
-Consult Permission Rules -> Generate Response -> Speak Naturally ->
-Take Actions -> Create Summary -> Notify User.
-
-Urgency and scam detection are Phase 2 work (task.md) — this orchestrator
-already emits their WS event types so the enum/dashboard contract is
-stable, but the stages themselves are no-ops here (scores stay None) until
-pipeline/urgency.py and pipeline/scam_detection.py exist.
-"""
-
+import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -28,6 +16,7 @@ from app.ws.events import EventType
 from app.ws.manager import manager
 
 _MEETING_SLOT_SCHEMA = {"start_at_iso": "string", "duration_minutes": "number"}
+_GREETING = "Hi, this is Ryan's AI assistant. How can I help you?"
 
 
 class CallPipeline:
@@ -59,18 +48,37 @@ class CallPipeline:
         context = CallContext(call_id=call_id, user_id=self._user_id, caller_number=self._transport.caller_number)
         await self._emit(call_id, EventType.CALL_INCOMING, {"caller_number": context.caller_number})
 
-        while True:
-            audio = await self._transport.next_caller_turn()
-            if audio is None:
-                break
-            await self._handle_caller_turn(call_row, context, audio)
-
-        await self._finish_call(call_row, context)
+        try:
+            await self._send_greeting(context)
+            while True:
+                audio = await self._transport.next_caller_turn()
+                if audio is None:
+                    break
+                await self._handle_caller_turn(call_row, context, audio)
+            await self._finish_call(call_row, context)
+        except Exception:
+            call_row.status = "disconnected"
+            call_row.ended_at = datetime.now(timezone.utc)
+            await self._db.commit()
+            raise
         return context
+
+    async def _send_greeting(self, context: CallContext) -> None:
+        call_id = context.call_id
+        context.transcript.append(TranscriptTurn(speaker="ai", text=_GREETING, lang="en"))
+        self._db.add(CallTranscript(call_id=uuid.UUID(call_id), speaker="ai", text=_GREETING, lang="en"))
+        await self._db.commit()
+        await self._emit(call_id, EventType.TRANSCRIPT_CHUNK, {"speaker": "ai", "text": _GREETING})
+
+        async def _tts_chunks():
+            async for chunk in self._tts.synthesize(_GREETING, "en"):
+                yield chunk.data
+
+        await self._transport.send_ai_turn(_tts_chunks())
 
     async def _handle_caller_turn(self, call_row: Call, context: CallContext, audio: bytes) -> None:
         call_id = context.call_id
-        lang = "en"  # TODO: per-turn language detection; EN default until Arabic path is exercised
+        lang = "en"
 
         async def _one_chunk():
             yield audio
@@ -78,32 +86,40 @@ class CallPipeline:
         caller_text = ""
         async for chunk in self._stt.stream_transcribe(_one_chunk(), lang):
             caller_text = chunk.text
+        print(f"[pipeline {call_id}] STT: {caller_text!r}", flush=True)
 
         context.transcript.append(TranscriptTurn(speaker="caller", text=caller_text, lang=lang))
         self._db.add(CallTranscript(call_id=uuid.UUID(call_id), speaker="caller", text=caller_text, lang=lang))
         await self._db.commit()
         await self._emit(call_id, EventType.TRANSCRIPT_CHUNK, {"speaker": "caller", "text": caller_text})
 
-        if context.caller_id_result is None:
-            result = await caller_id.identify_caller(
-                self._db, self._llm, self._user_id, context.caller_number, caller_text
-            )
+        need_caller_id = context.caller_id_result is None
+        caller_id_task = (
+            caller_id.identify_caller(self._db, self._llm, self._user_id, context.caller_number, caller_text)
+            if need_caller_id
+            else None
+        )
+        intent_task = intent_stage.detect_intent(self._llm, context.transcript_text())
+        if caller_id_task is not None:
+            result, intent_result = await asyncio.gather(caller_id_task, intent_task)
             context.caller_id_result = result
             call_row.caller_id_result_json = result
             if result.get("contact_id"):
                 call_row.contact_id = uuid.UUID(result["contact_id"])
             await self._db.commit()
             await self._emit(call_id, EventType.CALLER_IDENTIFIED, result)
-
-        intent_result = await intent_stage.detect_intent(self._llm, context.transcript_text())
+        else:
+            intent_result = await intent_task
         context.intent = intent_result
         call_row.intent_json = intent_result
         await self._db.commit()
         await self._emit(call_id, EventType.INTENT_DETECTED, intent_result)
+        print(f"[pipeline {call_id}] intent: {intent_result}", flush=True)
 
         action_summary = await self._maybe_schedule_meeting(context)
 
         reply_text = await response_gen.generate_response(self._llm, context, action_summary)
+        print(f"[pipeline {call_id}] reply: {reply_text!r}", flush=True)
         context.transcript.append(TranscriptTurn(speaker="ai", text=reply_text, lang=lang))
         self._db.add(CallTranscript(call_id=uuid.UUID(call_id), speaker="ai", text=reply_text, lang=lang))
         await self._db.commit()
@@ -114,11 +130,9 @@ class CallPipeline:
                 yield chunk.data
 
         await self._transport.send_ai_turn(_tts_chunks())
+        print(f"[pipeline {call_id}] AI audio sent", flush=True)
 
     async def _maybe_schedule_meeting(self, context: CallContext) -> str | None:
-        """Interview/appointment intents attempt to extract a proposed slot
-        from the transcript and schedule it, gated by the permission
-        engine. Runs at most once per call."""
         if self._meeting_scheduled:
             return None
         if not context.intent or context.intent.get("intent") not in ("interview", "appointment"):
