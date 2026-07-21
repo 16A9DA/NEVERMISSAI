@@ -59,7 +59,8 @@ LLMs:
 
 * STS: nvidia
 parakeet-1.1b-rnnt-multilingual-asr
-*
+* TTS nvidia chatterbox-multilingual-tts
+
 
 Database:
 
@@ -69,7 +70,7 @@ Database:
 
 Authentication:
 
-* Clerk or Auth.js
+* Clerk 
 
 Deployment:
 
@@ -281,7 +282,7 @@ Preferred working hours
 
 Calendar availability
 
-Languages
+Languages(AR/EN)
 
 Frequently contacted people
 
@@ -317,13 +318,6 @@ English
 
 Arabic
 
-Urdu
-
-French
-
-German
-
-Spanish
 
 Translate conversations in real time.
 
