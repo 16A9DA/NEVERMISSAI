@@ -56,7 +56,6 @@ export function applyDashboardEvent(event: DashboardEvent) {
         callerId: null,
         intent: null,
         actions: [],
-        calendarEvents: [],
         summary: null,
       });
       break;
@@ -77,9 +76,12 @@ export function applyDashboardEvent(event: DashboardEvent) {
     case "action_executed":
       setState({ actions: [...state.actions, payload as unknown as ActionEvent] });
       break;
-    case "calendar_updated":
-      setState({ calendarEvents: [...state.calendarEvents, payload as unknown as CalendarEventPayload] });
+    case "calendar_updated": {
+      const incoming = payload as unknown as CalendarEventPayload;
+      const withoutDupe = state.calendarEvents.filter((event) => event.id !== incoming.id);
+      setState({ calendarEvents: [...withoutDupe, incoming] });
       break;
+    }
     case "call_summary_ready":
       setState({ summary: payload.summary as string });
       break;
@@ -92,6 +94,10 @@ export function applyDashboardEvent(event: DashboardEvent) {
 
 export function setConnected(connected: boolean) {
   setState({ connected });
+}
+
+export function setCalendarEvents(events: CalendarEventPayload[]) {
+  setState({ calendarEvents: events });
 }
 
 function subscribe(listener: () => void) {

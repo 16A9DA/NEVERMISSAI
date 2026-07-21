@@ -9,7 +9,7 @@ export function CalendarWidget() {
     <div className="rounded-xl border border-border bg-card/60 p-4 backdrop-blur">
       <h2 className="mb-3 text-sm font-medium text-muted-foreground">Calendar</h2>
       {calendarEvents.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No events created this call.</p>
+        <p className="text-sm text-muted-foreground">No upcoming events.</p>
       ) : (
         <ul className="space-y-2 text-sm">
           {calendarEvents.map((event) => (

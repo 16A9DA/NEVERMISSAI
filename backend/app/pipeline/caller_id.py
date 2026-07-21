@@ -8,7 +8,8 @@ from app.llm.base import LLMClient
 
 RELATION_TYPES = [
     "recruiter", "employer", "family", "delivery", "friend",
-    "unknown", "bank", "government", "hospital", "school",
+    "unknown", "bank", "government", "hospital", "school","university",
+    "other"
 ]
 
 _CLASSIFY_SCHEMA = {"relation_type": "string", "confidence": "number", "reasoning": "string"}

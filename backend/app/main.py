@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.deps import get_chroma, get_redis
-from app.routers import demo, twilio
+from app.routers import calendar, demo, twilio
 from app.ws.router import router as ws_router
 
 settings = get_settings()
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "env": settings.ENV}
 
     app.include_router(demo.router)
+    app.include_router(calendar.router)
     app.include_router(twilio.router)
     app.include_router(ws_router)
 

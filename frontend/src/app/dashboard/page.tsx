@@ -1,13 +1,14 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ActionFeed } from "@/components/dashboard/ActionFeed";
 import { CalendarWidget } from "@/components/dashboard/CalendarWidget";
 import { CallerInfoPanel } from "@/components/dashboard/CallerInfoPanel";
 import { TranscriptStream } from "@/components/dashboard/TranscriptStream";
 import { useDashboardSocket } from "@/hooks/useDashboardSocket";
+import { setCalendarEvents } from "@/lib/store";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const SCENARIOS = ["recruiter", "delivery", "scam", "hospital"] as const;
@@ -16,6 +17,18 @@ export default function DashboardPage() {
   useDashboardSocket();
   const { getToken } = useAuth();
   const [placing, setPlacing] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/calendar/events`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        setCalendarEvents(await res.json());
+      }
+    })();
+  }, [getToken]);
 
   async function placeCall(scenario: string) {
     setPlacing(scenario);

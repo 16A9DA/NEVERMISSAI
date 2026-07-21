@@ -63,3 +63,9 @@ class LocalCalendarProvider(CalendarProvider):
         await self._db.commit()
         await self._db.refresh(row)
         return _to_data(row)
+
+    async def cancel_event(self, event_id: uuid.UUID) -> None:
+        result = await self._db.execute(select(CalendarEvent).where(CalendarEvent.id == event_id))
+        row = result.scalar_one()
+        await self._db.delete(row)
+        await self._db.commit()

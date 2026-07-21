@@ -37,3 +37,7 @@ class CalendarProvider(ABC):
     @abstractmethod
     async def reschedule(self, event_id: uuid.UUID, start_at: datetime, end_at: datetime) -> CalendarEventData:
         ...
+
+    @abstractmethod
+    async def cancel_event(self, event_id: uuid.UUID) -> None:
+        ...
