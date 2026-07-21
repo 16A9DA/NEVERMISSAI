@@ -16,8 +16,6 @@ async def create_calendar_event(
     end_at: datetime,
     location: str | None = None,
 ) -> tuple[PermissionDecision, dict | None]:
-    """Schedules a calendar event, gated by the permission engine. Returns
-    the permission decision plus the created event data (None if denied)."""
     decision = await check(db, context.user_id, "schedule_meetings")
     context.permission_decisions.append(vars(decision))
     if not decision.allowed:

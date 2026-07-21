@@ -13,9 +13,6 @@ from app.db.session import async_session_maker
 
 settings = get_settings()
 
-# Hackathon dev convenience: with no live Clerk instance, requests in ENV=dev
-# with no Authorization header resolve to this fixed demo user (also the id
-# scripts/seed_demo_data.py seeds contacts/permissions/memory under).
 DEV_FALLBACK_CLERK_USER_ID = "demo_user"
 
 _redis: Redis | None = None
@@ -43,13 +40,6 @@ def get_chroma() -> chromadb.ClientAPI:
 
 
 def decode_clerk_token(token: str) -> str:
-    """Decodes a Clerk session JWT and returns the Clerk user id (`sub` claim).
-
-    Signature verification against CLERK_JWKS_URL is still TODO (tracked
-    seam, not wired up) — this only decodes the token. Fine for a hackathon
-    demo behind a private network; do not ship this to a real deployment
-    without adding JWKS signature verification.
-    """
     try:
         claims = jwt.get_unverified_claims(token)
     except Exception as exc:
@@ -69,9 +59,6 @@ async def get_current_user_id(authorization: str = Header(default="")) -> str:
 
 
 async def get_current_user_id_ws(token: str | None = None) -> str:
-    """Same as get_current_user_id but for WebSocket routes, which take the
-    Clerk session token as a `?token=` query param (browsers can't set
-    custom headers on the WebSocket handshake)."""
     if not token:
         if settings.ENV == "dev":
             return DEV_FALLBACK_CLERK_USER_ID
@@ -83,8 +70,6 @@ async def get_current_user(
     clerk_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Resolves the Clerk user id to a local `users` row, creating it on
-    first sight (Clerk owns identity, we just need a local foreign key)."""
     result = await db.execute(select(User).where(User.clerk_user_id == clerk_user_id))
     user = result.scalar_one_or_none()
     if user is None:

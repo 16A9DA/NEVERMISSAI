@@ -6,12 +6,6 @@ from app.llm.base import LLMClient, LLMResponse
 
 
 class GenericOpenAICompatibleClient(LLMClient):
-    """One adapter over any OpenAI-compatible chat completions endpoint —
-    works for OpenAI, OpenRouter, or a local/self-hosted server by pointing
-    base_url at it. Which vendor this hits is entirely an env var choice
-    (LLM_BASE_URL / LLM_API_KEY / LLM_MODEL), not a code choice.
-    """
-
     def __init__(self, api_key: str, base_url: str, model: str):
         self._client = AsyncOpenAI(api_key=api_key or "unset", base_url=base_url)
         self._model = model

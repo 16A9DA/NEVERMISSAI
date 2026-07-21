@@ -29,8 +29,6 @@ async def place_call(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Runs a scripted demo call end-to-end through the real pipeline —
-    the presentation safety net if a live mic demo has AV problems."""
     if body.scenario not in DEMO_SCRIPTS:
         raise HTTPException(400, f"unknown scenario '{body.scenario}', choose one of {list(DEMO_SCRIPTS)}")
 

@@ -8,8 +8,6 @@ from app.ws.events import EventType
 
 
 class ConnectionManager:
-    """Fans out pipeline events to every dashboard socket for a given user."""
-
     def __init__(self):
         self._connections: dict[str, set[WebSocket]] = defaultdict(set)
 

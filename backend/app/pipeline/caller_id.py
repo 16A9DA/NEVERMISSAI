@@ -17,8 +17,6 @@ _CLASSIFY_SCHEMA = {"relation_type": "string", "confidence": "number", "reasonin
 async def identify_caller(
     db: AsyncSession, llm: LLMClient, user_id: uuid.UUID, phone_number: str, opening_line: str
 ) -> dict:
-    """Looks up the contact database first (confidence 1.0 on a match);
-    falls back to LLM classification from the caller's opening line."""
     result = await db.execute(
         select(Contact).where(Contact.user_id == user_id, Contact.phone_number == phone_number)
     )

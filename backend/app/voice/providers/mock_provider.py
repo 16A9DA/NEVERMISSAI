@@ -1,15 +1,3 @@
-"""Mock STT/TTS used for local dev and demos where the real NVIDIA models
-(parakeet-1.1b-rnnt-multilingual-asr, chatterbox-multilingual-tts) aren't
-available. Selected via STT_PROVIDER=mock / TTS_PROVIDER=mock.
-
-MockSTT does not run real speech recognition: it decodes the incoming
-"audio" chunks as UTF-8 text (the mock call transport sends scripted
-dialogue lines as bytes in place of a real microphone signal) and, after a
-short simulated-latency delay, yields the joined text as the final
-transcript. MockTTS returns a short silent audio placeholder instead of
-real speech.
-"""
-
 import asyncio
 from collections.abc import AsyncIterator
 
@@ -28,13 +16,12 @@ class MockSTT(STTProvider):
     async def stream_transcribe(
         self, audio_chunks: AsyncIterator[bytes], lang: str
     ) -> AsyncIterator[TranscriptChunk]:
-        text = "".join(chunk.decode("utf-8", errors="ignore") async for chunk in audio_chunks)
+        parts = [chunk.decode("utf-8", errors="ignore") async for chunk in audio_chunks]
+        text = "".join(parts)
         await asyncio.sleep(self._delay_seconds)
         yield TranscriptChunk(text=text, lang=lang, is_final=True)
 
 
 class MockTTS(TTSProvider):
-    """Returns a short silent audio placeholder instead of real speech."""
-
     async def synthesize(self, text: str, lang: str) -> AsyncIterator[AudioChunk]:
         yield AudioChunk(data=_SILENT_WAV_HEADER, lang=lang)

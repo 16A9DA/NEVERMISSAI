@@ -1,9 +1,3 @@
-"""Calendar provider interface. The demo runs entirely on
-local_provider.py (Postgres-backed) to avoid OAuth setup risk during the
-hackathon window; a real Google Calendar provider is a noted seam here,
-not built.
-"""
-
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

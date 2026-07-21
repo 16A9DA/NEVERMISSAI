@@ -1,10 +1,3 @@
-"""Permission engine — the spec's key differentiator. This is a hard gate
-in front of every action and every promise the AI makes; the LLM's
-proposed action is never trusted directly for compliance-sensitive
-decisions (payments, passwords, IDs, contracts). A deny rule always wins
-over an allow rule for the same action.
-"""
-
 import uuid
 from dataclasses import dataclass
 

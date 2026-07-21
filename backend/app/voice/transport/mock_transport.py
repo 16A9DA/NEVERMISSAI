@@ -1,25 +1,9 @@
-"""Mock call transports — the primary demo path (no Twilio/phone line
-needed). Two flavors:
-
-- ScriptedMockTransport: plays a fixed list of caller lines with no
-  browser involved, used by POST /demo/place-call (the presentation
-  safety net).
-- LiveMockTransport: bridges a browser tab connected to /ws/call/{id} as
-  the "phone line" — the caller types (or, later, speaks) a line, the
-  server runs it through the pipeline and replies.
-
-Both feed MockSTT/MockTTS via UTF-8-encoded text standing in for real
-audio (see app/voice/providers/mock_provider.py) since no real ASR/TTS
-models are wired up yet.
-"""
-
 from collections.abc import AsyncIterator
 
 from fastapi import WebSocket
 
 from app.voice.transport.base import CallTransport
 
-# Scripted caller lines for the four demo scenarios (POST /demo/place-call).
 DEMO_SCRIPTS: dict[str, list[str]] = {
     "recruiter": [
         "Hi, this is Jordan from Acme Talent Partners, I'm calling about the "
@@ -60,21 +44,13 @@ class ScriptedMockTransport(CallTransport):
 
     async def send_ai_turn(self, audio_chunks: AsyncIterator[bytes]) -> None:
         async for _ in audio_chunks:
-            pass  # scripted demo has no listener, audio is discarded
+            pass
 
     async def end_call(self) -> None:
         self._index = len(self._script)
 
 
 class LiveMockTransport(CallTransport):
-    """Turn-based text bridge over a browser WebSocket at /ws/call/{id}.
-
-    Expects the browser to send `{"text": "..."}` per caller turn and
-    `{"end": true}` to hang up. The AI's reply (text + pipeline events) is
-    not echoed back on this socket — it is broadcast on /ws/dashboard like
-    every other call, which is what the dashboard UI watches.
-    """
-
     def __init__(self, websocket: WebSocket, caller_number: str):
         self._ws = websocket
         self.caller_number = caller_number
@@ -91,7 +67,7 @@ class LiveMockTransport(CallTransport):
 
     async def send_ai_turn(self, audio_chunks: AsyncIterator[bytes]) -> None:
         async for _ in audio_chunks:
-            pass  # placeholder audio isn't played in the browser demo client
+            pass
 
     async def end_call(self) -> None:
         self._ended = True
