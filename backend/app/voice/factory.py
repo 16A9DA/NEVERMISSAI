@@ -10,26 +10,26 @@ _tts: TTSProvider | None = None
 def get_stt() -> STTProvider:
     global _stt
     if _stt is None:
-        if settings.STT_PROVIDER == "mock":
+        if settings.STT_PROVIDER == "groq":
+            from app.voice.providers.groq_stt import GroqSTT
+
+            _stt = GroqSTT()
+        else:
             from app.voice.providers.mock_provider import MockSTT
 
             _stt = MockSTT()
-        else:
-            from app.voice.providers.parakeet_stt import ParakeetSTT
-
-            _stt = ParakeetSTT()
     return _stt
 
 
 def get_tts() -> TTSProvider:
     global _tts
     if _tts is None:
-        if settings.TTS_PROVIDER == "mock":
+        if settings.TTS_PROVIDER == "groq":
+            from app.voice.providers.groq_tts import GroqTTS
+
+            _tts = GroqTTS()
+        else:
             from app.voice.providers.mock_provider import MockTTS
 
             _tts = MockTTS()
-        else:
-            from app.voice.providers.chatterbox_tts import ChatterboxTTS
-
-            _tts = ChatterboxTTS()
     return _tts
