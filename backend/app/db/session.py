@@ -1,3 +1,6 @@
+from datetime import datetime
+
+from sqlalchemy import DateTime
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -10,7 +13,7 @@ async_session_maker = async_sessionmaker(engine, expire_on_commit=False, class_=
 
 
 class Base(DeclarativeBase):
-    pass
+    type_annotation_map = {datetime: DateTime(timezone=True)}
 
 
 async def get_session() -> AsyncSession:

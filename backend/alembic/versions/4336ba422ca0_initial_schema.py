@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column("email", sa.String, nullable=True),
         sa.Column("phone", sa.String, nullable=True),
         sa.Column("preferred_language", sa.String, nullable=False, server_default="en"),
-        sa.Column("created_at", sa.DateTime, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -36,7 +36,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String, nullable=True),
         sa.Column("relation_type", sa.String, nullable=False),
         sa.Column("notes", sa.Text, nullable=True),
-        sa.Column("created_at", sa.DateTime, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -46,7 +46,7 @@ def upgrade() -> None:
         sa.Column("action", sa.String, nullable=False),
         sa.Column("effect", sa.String, nullable=False),
         sa.Column("condition_json", postgresql.JSONB, nullable=False, server_default="{}"),
-        sa.Column("created_at", sa.DateTime, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -70,8 +70,8 @@ def upgrade() -> None:
         sa.Column("urgency_bucket", sa.String, nullable=True),
         sa.Column("scam_score", sa.Numeric, nullable=True),
         sa.Column("scam_reasons_json", postgresql.JSONB, nullable=True),
-        sa.Column("started_at", sa.DateTime, server_default=sa.func.now()),
-        sa.Column("ended_at", sa.DateTime, nullable=True),
+        sa.Column("started_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("ended_at", sa.DateTime(timezone=True), nullable=True),
     )
 
     op.create_table(
@@ -79,12 +79,12 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("title", sa.String, nullable=False),
-        sa.Column("start_at", sa.DateTime, nullable=False),
-        sa.Column("end_at", sa.DateTime, nullable=False),
+        sa.Column("start_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("end_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("location", sa.String, nullable=True),
         sa.Column("source", sa.String, nullable=False, server_default="ai_created"),
         sa.Column("related_call_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("calls.id"), nullable=True),
-        sa.Column("created_at", sa.DateTime, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -93,7 +93,7 @@ def upgrade() -> None:
         sa.Column("call_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("calls.id"), nullable=False),
         sa.Column("event_type", sa.String, nullable=False),
         sa.Column("payload_json", postgresql.JSONB, nullable=False, server_default="{}"),
-        sa.Column("ts", sa.DateTime, server_default=sa.func.now()),
+        sa.Column("ts", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -103,7 +103,7 @@ def upgrade() -> None:
         sa.Column("speaker", sa.String, nullable=False),
         sa.Column("text", sa.Text, nullable=False),
         sa.Column("lang", sa.String, nullable=False, server_default="en"),
-        sa.Column("ts", sa.DateTime, server_default=sa.func.now()),
+        sa.Column("ts", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -124,7 +124,7 @@ def upgrade() -> None:
         sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("phone_number", sa.String, nullable=False, index=True),
         sa.Column("reason", sa.Text, nullable=False),
-        sa.Column("flagged_at", sa.DateTime, server_default=sa.func.now()),
+        sa.Column("flagged_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
     op.create_table(
@@ -134,7 +134,7 @@ def upgrade() -> None:
         sa.Column("call_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("calls.id"), nullable=True),
         sa.Column("type", sa.String, nullable=False),
         sa.Column("payload_json", postgresql.JSONB, nullable=False, server_default="{}"),
-        sa.Column("delivered_at", sa.DateTime, nullable=True),
+        sa.Column("delivered_at", sa.DateTime(timezone=True), nullable=True),
     )
 
 
