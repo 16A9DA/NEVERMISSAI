@@ -2,6 +2,7 @@ CLAUDE.md
 .claude/
 .env
 .env.*
+!.env.example
 *.key
 *.pem
 secrets*
