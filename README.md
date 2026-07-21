@@ -6,15 +6,15 @@ AI personal call agent. Answers phone calls when user unavailable. Not reception
 
 Covers: job interviews, recruiter calls, family emergencies, hospital calls, business opportunities, deliveries, government calls.
 
-## Planned stack
+## Stack
 
 Frontend: Next.js, TypeScript, TailwindCSS, Framer Motion, Shadcn UI.
 Backend: FastAPI (Python).
 Realtime: WebSockets.
-Voice: Twilio Voice (or simulated for demo), Realtime LLM API, Whisper STT, TTS.
-LLMs: GPT-5.5, Gemini, Claude, OpenRouter fallback.
-Data: PostgreSQL, Redis, ChromaDB (long-term memory).
-Auth: Clerk or Auth.js.
+Voice: Twilio Voice (mock transport for demo), Groq STT and TTS.
+LLM: Groq (llama 3.3 70b versatile).
+Data: PostgreSQL, Redis, ChromaDB (long term memory).
+Auth: Clerk.
 Deploy: Docker.
 
 ## Core capabilities
@@ -34,12 +34,14 @@ Deploy: Docker.
 
 ## Status
 
-Spec stage only, see `plan.md`. No application code yet.
+In active development. Backend (FastAPI) covers voice pipeline, calendar, memory, permissions, and WebSocket routers. Frontend (Next.js) app scaffolded with components, hooks, and API proxy. Full spec in `plan.md`.
 
 ## Install
 
-Not yet runnable. Stack and setup steps land once implementation starts.
+Backend: Python virtualenv, install `backend/requirements.txt` (or equivalent), configure `.env` from `.env.example`, run `uvicorn app.main:app`.
+Frontend: `npm install` in `frontend/`, then `npm run dev`.
+See `scripts/dev_up.sh` for a combined startup path.
 
 ## Usage
 
-Pending implementation.
+Start backend and frontend as above, then call the configured Twilio number (or use the mock transport for local demo) to exercise the call pipeline.
