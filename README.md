@@ -1,5 +1,13 @@
 # NeverMiss AI
 
+
+<h2 align="center">Preview</h2>
+
+<p align="center">
+  <img src="UI.png" alt="Project Preview" width="500">
+</p>
+
+
 An AI that answers your phone when you can't.
 
 Most people let calls go to voicemail and deal with them later, if at all. NeverMiss AI picks up instead. It listens to the caller, figures out who they are and what they want, and handles it the way you would: books an appointment, warns you if it smells like a scam, translates if the caller speaks another language, and gives you a clear summary the moment the call ends.
