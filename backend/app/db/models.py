@@ -144,3 +144,17 @@ class Notification(Base):
     type: Mapped[str] = mapped_column(String)  # emergency|summary|scam_alert
     payload_json: Mapped[dict] = mapped_column(JSONB, default=dict)
     delivered_at: Mapped[datetime] = mapped_column(nullable=True)
+
+
+class Booking(Base):
+    __tablename__ = "bookings"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    call_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("calls.id"), nullable=True)
+    caller_number: Mapped[str] = mapped_column(String, nullable=True)
+    title: Mapped[str] = mapped_column(String)
+    start_at: Mapped[datetime] = mapped_column()
+    end_at: Mapped[datetime] = mapped_column(nullable=True)
+    status: Mapped[str] = mapped_column(String, default="confirmed")  # confirmed|cancelled
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())

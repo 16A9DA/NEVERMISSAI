@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
+import { useDashboardStore } from "@/lib/store";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -31,6 +32,7 @@ export function RecentCalls() {
   const { getToken } = useAuth();
   const [calls, setCalls] = useState<CallListItem[]>([]);
   const [selected, setSelected] = useState<CallDetail | null>(null);
+  const callListVersion = useDashboardStore().callListVersion;
 
   useEffect(() => {
     (async () => {
@@ -40,7 +42,7 @@ export function RecentCalls() {
       });
       if (res.ok) setCalls(await res.json());
     })();
-  }, [getToken]);
+  }, [getToken, callListVersion]);
 
   async function openCall(id: string) {
     const token = await getToken();

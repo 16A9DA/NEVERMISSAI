@@ -20,6 +20,7 @@ export interface DashboardState {
   actions: ActionEvent[];
   calendarEvents: CalendarEventPayload[];
   summary: string | null;
+  callListVersion: number;
 }
 
 const initialState: DashboardState = {
@@ -31,6 +32,7 @@ const initialState: DashboardState = {
   actions: [],
   calendarEvents: [],
   summary: null,
+  callListVersion: 0,
 };
 
 let state: DashboardState = initialState;
@@ -57,6 +59,7 @@ export function applyDashboardEvent(event: DashboardEvent) {
         intent: null,
         actions: [],
         summary: null,
+        callListVersion: state.callListVersion + 1,
       });
       break;
     case "transcript_chunk":
@@ -86,6 +89,7 @@ export function applyDashboardEvent(event: DashboardEvent) {
       setState({ summary: payload.summary as string });
       break;
     case "call_ended":
+      setState({ callListVersion: state.callListVersion + 1 });
       break;
     default:
       break;

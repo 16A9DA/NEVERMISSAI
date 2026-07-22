@@ -10,6 +10,8 @@ from app.voice.transport.base import CallTransport
 _SILENCE_RMS_THRESHOLD = 25
 _SILENCE_FRAMES_TO_END_TURN = 60
 _MIN_SPEECH_FRAMES = 5
+_BARGE_IN_SPEECH_FRAMES = 4
+_BARGE_IN_GRACE_FRAMES = 15
 
 
 class TwilioTransport(CallTransport):
@@ -18,14 +20,18 @@ class TwilioTransport(CallTransport):
         self.caller_number = caller_number
         self._stream_sid = stream_sid
         self._ended = False
+        self._pending_pcm8k = bytearray()
+        self._pending_speech_frames = 0
 
     async def next_caller_turn(self) -> bytes | None:
         if self._ended:
             return None
 
-        speech_pcm8k = bytearray()
+        speech_pcm8k = self._pending_pcm8k
+        speech_frames = self._pending_speech_frames
+        self._pending_pcm8k = bytearray()
+        self._pending_speech_frames = 0
         silence_run = 0
-        speech_frames = 0
 
         while True:
             message = await self._ws.receive_text()
@@ -64,24 +70,65 @@ class TwilioTransport(CallTransport):
         if not pcm16k:
             return
 
-        drain_task = asyncio.create_task(self._drain_while_sending())
+        barge_in = asyncio.Event()
+        listen_task = asyncio.create_task(self._listen_for_barge_in(barge_in))
 
-        mulaw8k = _downsample_to_8k_mulaw(bytes(pcm16k))
-        frame_size = 160
-        for i in range(0, len(mulaw8k), frame_size):
-            payload = base64.b64encode(mulaw8k[i : i + frame_size]).decode("ascii")
-            await self._ws.send_text(
-                json.dumps({"event": "media", "streamSid": self._stream_sid, "media": {"payload": payload}})
-            )
+        try:
+            mulaw8k = _downsample_to_8k_mulaw(bytes(pcm16k))
+            frame_size = 160
+            for i in range(0, len(mulaw8k), frame_size):
+                if barge_in.is_set():
+                    await self._ws.send_text(json.dumps({"event": "clear", "streamSid": self._stream_sid}))
+                    break
+                payload = base64.b64encode(mulaw8k[i : i + frame_size]).decode("ascii")
+                await self._ws.send_text(
+                    json.dumps({"event": "media", "streamSid": self._stream_sid, "media": {"payload": payload}})
+                )
+                await asyncio.sleep(0.02)
+        finally:
+            if not listen_task.done():
+                listen_task.cancel()
+            try:
+                await listen_task
+            except BaseException:
+                pass
 
-        drain_task.cancel()
-
-    async def _drain_while_sending(self) -> None:
+    async def _listen_for_barge_in(self, barge_in: asyncio.Event) -> None:
+        pending_pcm8k = bytearray()
+        speech_frames = 0
+        frames_seen = 0
         while True:
             message = await self._ws.receive_text()
-            if json.loads(message).get("event") == "stop":
+            frame = json.loads(message)
+            event = frame.get("event")
+
+            if event == "stop":
                 self._ended = True
+                barge_in.set()
                 return
+
+            if event != "media":
+                continue
+
+            frames_seen += 1
+            mulaw = base64.b64decode(frame["media"]["payload"])
+            pcm8k = audioop.ulaw2lin(mulaw, 2)
+            rms = audioop.rms(pcm8k, 2)
+
+            if frames_seen <= _BARGE_IN_GRACE_FRAMES:
+                continue
+
+            if rms >= _SILENCE_RMS_THRESHOLD:
+                pending_pcm8k += pcm8k
+                speech_frames += 1
+                if speech_frames >= _BARGE_IN_SPEECH_FRAMES:
+                    self._pending_pcm8k = pending_pcm8k
+                    self._pending_speech_frames = speech_frames
+                    barge_in.set()
+                    return
+            else:
+                pending_pcm8k = bytearray()
+                speech_frames = 0
 
     async def end_call(self) -> None:
         self._ended = True

@@ -89,3 +89,14 @@ async def get_current_user_from_query(
     db: AsyncSession = Depends(get_db),
 ) -> User:
     return await _get_or_create_user(clerk_user_id, db)
+
+
+async def get_call_owner(db: AsyncSession = Depends(get_db)) -> User:
+    """Incoming Twilio calls carry no Clerk auth, so they can't resolve to
+    'whoever is logged in'. Attribute them to the one real registered
+    account instead of the anonymous dev fallback user."""
+    result = await db.execute(select(User).where(User.clerk_user_id != DEV_FALLBACK_CLERK_USER_ID).order_by(User.id))
+    user = result.scalars().first()
+    if user is not None:
+        return user
+    return await _get_or_create_user(DEV_FALLBACK_CLERK_USER_ID, db)

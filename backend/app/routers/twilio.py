@@ -1,12 +1,13 @@
 import json
+import traceback
 
-from fastapi import APIRouter, Depends, Form, WebSocket
+from fastapi import APIRouter, Depends, Form, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.db.models import User
-from app.deps import get_current_user, get_db
+from app.deps import get_call_owner, get_db
 from app.pipeline.orchestrator import CallPipeline
 from app.voice.transport.twilio_transport import TwilioTransport
 
@@ -30,7 +31,7 @@ async def voice_webhook(From: str = Form(...)):
 async def media_stream(
     websocket: WebSocket,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_call_owner),
 ):
     await websocket.accept()
 
@@ -47,8 +48,10 @@ async def media_stream(
     pipeline = CallPipeline(db=db, user_id=user.id, transport=transport)
     try:
         await pipeline.run()
+    except WebSocketDisconnect:
+        print(f"[twilio] call {stream_sid} ended: caller hung up", flush=True)
     except Exception as e:
-        print(f"[twilio] call {stream_sid} crashed: {e!r}", flush=True)
+        print(f"[twilio] call {stream_sid} crashed: {e!r}\n{traceback.format_exc()}", flush=True)
     finally:
         try:
             await websocket.close()

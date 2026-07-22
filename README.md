@@ -1,47 +1,66 @@
 # NeverMiss AI
 
-## Overview
+An AI that answers your phone when you can't.
 
-AI personal call agent. Answers phone calls when user unavailable. Not receptionist bot, digital rep: understands user prefs, decides within set limits, detects scams, schedules appointments, translates calls, summarizes, escalates emergencies.
+Most people let calls go to voicemail and deal with them later, if at all. NeverMiss AI picks up instead. It listens to the caller, figures out who they are and what they want, and handles it the way you would: books an appointment, warns you if it smells like a scam, translates if the caller speaks another language, and gives you a clear summary the moment the call ends.
 
-Covers: job interviews, recruiter calls, family emergencies, hospital calls, business opportunities, deliveries, government calls.
+Built for [try.ka.nz](https://try.ka.nz/) AI hackathon.
 
-## Stack
+## What it actually does
 
-Frontend: Next.js, TypeScript, TailwindCSS, Framer Motion, Shadcn UI.
-Backend: FastAPI (Python).
-Realtime: WebSockets.
-Voice: Twilio Voice (mock transport for demo), Groq STT and TTS.
-LLM: Groq (llama 3.3 70b versatile).
-Data: PostgreSQL, Redis, ChromaDB (long term memory).
-Auth: Clerk.
-Deploy: Docker.
+Say someone calls while you're in a meeting. NeverMiss AI:
 
-## Core capabilities
+1. Answers and talks to them like a real assistant would, not a phone tree.
+2. Works out who's calling and why: a recruiter, a family member, a delivery driver, a scammer, whoever.
+3. Follows rules you set. You decide what it's allowed to promise or agree to.
+4. Books, moves, or cancels appointments on the spot if that's what the call needs.
+5. Flags anything that sounds like fraud (fake bank calls, "verify your OTP," that kind of thing) and explains why.
+6. Writes up a summary after the call: what was said, what needs following up, any dates or numbers mentioned.
+7. If something's urgent (a hospital, an accident, an emergency), it flags that too so you notice it fast.
 
-- Caller identification with confidence score (recruiter, employer, family, delivery, bank, government, hospital, school, unknown).
-- Intent detection (interview, delivery, appointment, emergency, spam, fraud, sales, personal, business).
-- Urgency engine, score 0 to 100, green/yellow/orange/red.
-- Scam detection with explanation (fake banks, OTP requests, deepfake voices, tech support and courier scams).
-- Permission engine: user-defined allow/deny rules the AI must obey.
-- Personal memory: hours, calendar, languages, contacts, style, past conversations.
-- Calendar integration: create/reschedule events, check availability.
-- Real-time translation (English, Arabic, Urdu, French, German, Spanish).
-- Emergency mode: immediate alert plus priority flag on accident, hospital, police, fire, ambulance, medical.
-- Smart call summaries: action items, deadlines, people, locations, numbers, events.
-- Live dashboard: waveform, streaming transcript, urgency gauge, scam score, actions, notifications.
-- Analytics: calls answered, time saved, scams blocked, appointments scheduled, response time.
+You see all of this on a live dashboard while the call is still happening, transcript and all.
+
+## Tech stack
+
+**Backend:** Python, FastAPI, PostgreSQL, Redis, ChromaDB for long-term memory of your preferences and past calls.
+
+**Voice:** Twilio for the phone line, Groq for speech-to-text, text-to-speech, and the language model driving the conversation (Llama 3.3 70B).
+
+**Frontend:** Next.js, TypeScript, Tailwind CSS, shadcn/ui.
+
+**Auth:** Clerk.
+
+**Calendar:** Own built-in scheduler by default, with optional Google Calendar sync once you connect an account.
+
+**Deploy:** Docker Compose.
+
+## Requirements
+
+- Docker and Docker Compose.
+- A Twilio account with a phone number.
+- A Groq API key.
+- A Clerk account, for dashboard login.
+- A Google Cloud OAuth client, only if you want real Google Calendar sync. Skip it and the app uses its own built-in calendar instead.
+
+## Try it
+
+1. Copy `.env.example` to `.env` and fill in your keys (Twilio, Groq, Clerk, and optionally Google Calendar).
+2. Run `docker compose up`. This builds and starts everything: PostgreSQL, Redis, ChromaDB, the backend on port 8010, and the frontend on port 3000.
+3. Point your Twilio number's voice webhook at your running backend (`https://your-domain/twilio/voice`). For local testing, expose it first with something like ngrok.
+4. Open `http://localhost:3000`, call your Twilio number, and watch the call show up live on the dashboard.
+
+Prefer running things without Docker? `scripts/dev_up.sh` starts the backend and frontend directly, useful while actively developing.
+
+No Google Calendar? No problem: bookings just get stored and shown in the dashboard's own calendar instead.
 
 ## Status
 
-In active development. Backend (FastAPI) covers voice pipeline, calendar, memory, permissions, and WebSocket routers. Frontend (Next.js) app scaffolded with components, hooks, and API proxy. Full spec in `plan.md`.
+Working end to end: calls come in, get transcribed, get a real AI response, and show up live on the dashboard. Appointment booking, scam detection, and call summaries are all functional. Some pieces (analytics, multi-language polish) are still rough since this came out of a hackathon sprint, not a year of production hardening.
 
-## Install
+## Why this exists
 
-Backend: Python virtualenv, install `backend/requirements.txt` (or equivalent), configure `.env` from `.env.example`, run `uvicorn app.main:app`.
-Frontend: `npm install` in `frontend/`, then `npm run dev`.
-See `scripts/dev_up.sh` for a combined startup path.
+Nobody wants to miss the call that actually mattered, a job offer, a family emergency, a doctor's office trying to reschedule you. Voicemail doesn't solve that. This tries to.
 
-## Usage
+## NOTE
 
-Start backend and frontend as above, then call the configured Twilio number (or use the mock transport for local demo) to exercise the call pipeline.
+AI can make mistakes. Please verify important information before relying on it.

@@ -2,7 +2,6 @@ import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Call, CallEvent, CallTranscript
@@ -63,6 +62,7 @@ class CallPipeline:
             call_row.status = "disconnected"
             call_row.ended_at = datetime.now(timezone.utc)
             await self._db.commit()
+            await self._emit(call_id, EventType.CALL_ENDED, {})
             raise
         return context
 
@@ -173,7 +173,7 @@ class CallPipeline:
         caller_action = context.action.get("action") if context.action else None
         appointment_context = intent in ("interview", "appointment")
 
-        if caller_action == "book" and appointment_context:
+        if appointment_context and self._last_event_id is None and caller_action != "cancel":
             slot = await self._extract_meeting_slot(context)
             if slot is None:
                 return None

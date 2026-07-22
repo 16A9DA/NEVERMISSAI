@@ -29,7 +29,9 @@ export function CalendarWidget() {
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-muted-foreground">Google Calendar</h2>
+        <h2 className="text-sm font-medium text-muted-foreground">
+          {connected ? "Google Calendar" : "Web Calendar"}
+        </h2>
         {connected === false && (
           <button className="text-xs text-primary underline" onClick={connectGoogleCalendar}>
             Connect
@@ -37,9 +39,7 @@ export function CalendarWidget() {
         )}
       </div>
 
-      {connected === false ? (
-        <p className="text-sm text-muted-foreground">Not connected.</p>
-      ) : calendarEvents.length === 0 ? (
+      {calendarEvents.length === 0 ? (
         <p className="text-sm text-muted-foreground">No upcoming events.</p>
       ) : (
         <ul className="space-y-2 divide-y">
