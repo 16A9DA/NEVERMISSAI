@@ -4,7 +4,7 @@
 <h2 align="center">Preview</h2>
 
 <p align="center">
-  <img src="UI.png" alt="Project Preview" width="500">
+  <video src="nevermiss.mp4" width="500" controls></video>
 </p>
 
 

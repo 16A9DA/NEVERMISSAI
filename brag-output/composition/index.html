@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0a0a0a;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        color: #fafafa;
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* ---- hook: centered status card, own element, own timing window ---- */
+      #hook-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      /* ---- status bar: dashboard top bar, own element, own timing window ---- */
+      #status-wrap {
+        position: absolute;
+        top: 64px;
+        left: 96px;
+        right: 96px;
+      }
+      .status-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #141414;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 28px 40px;
+      }
+      #hook-wrap .status-card {
+        width: 900px;
+      }
+      .status-label {
+        font-size: 20px;
+        color: #c7c7cf;
+        margin-bottom: 8px;
+      }
+      .status-number {
+        font-size: 40px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .status-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .status-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #22c55e;
+        box-shadow: 0 0 16px 2px rgba(34, 197, 94, 0.55);
+      }
+      .status-online {
+        font-size: 22px;
+        color: #c7c7cf;
+      }
+
+      /* ---- dashboard grid shell ---- */
+      #grid {
+        position: absolute;
+        top: 200px;
+        left: 96px;
+        right: 96px;
+        bottom: 64px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+      .card {
+        background: rgba(23, 23, 23, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 28px 32px;
+      }
+      .card-title {
+        font-size: 19px;
+        color: #c7c7cf;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .live-tag {
+        color: #22c55e;
+        font-size: 15px;
+      }
+      .placeholder {
+        font-size: 17px;
+        color: #b0b0b8;
+      }
+
+      /* transcript */
+      #transcript-card {
+        flex: 1;
+      }
+      .bubble {
+        max-width: 78%;
+        padding: 14px 20px;
+        border-radius: 12px;
+        font-size: 18px;
+        line-height: 1.4;
+        margin-bottom: 14px;
+        opacity: 0;
+      }
+      .bubble-caller {
+        background: #262626;
+        align-self: flex-start;
+      }
+      .bubble-agent {
+        background: rgba(250, 250, 250, 0.14);
+        align-self: flex-end;
+        margin-left: auto;
+      }
+      .bubble-speaker {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #b0b0b8;
+        margin-bottom: 6px;
+      }
+      #bubbles {
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* caller info */
+      .field {
+        opacity: 0;
+        margin-bottom: 14px;
+        font-size: 19px;
+      }
+      .field-label {
+        color: #fafafa;
+        font-weight: 600;
+        text-transform: capitalize;
+      }
+      .field-sub {
+        color: #c7c7cf;
+        font-size: 17px;
+      }
+      #confidence {
+        color: #c7c7cf;
+        font-size: 15px;
+        float: right;
+      }
+
+      /* actions */
+      .action-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 19px;
+        opacity: 0;
+        margin-bottom: 16px;
+      }
+      .allowed-tag {
+        color: #22c55e;
+        font-size: 16px;
+      }
+      #summary {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 16px;
+        font-size: 17px;
+        color: #c7c7cf;
+        opacity: 0;
+      }
+      #summary strong {
+        display: block;
+        color: #fafafa;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      /* calendar */
+      #cal-event {
+        opacity: 0;
+        font-size: 18px;
+      }
+      #cal-event .cal-when {
+        color: #c7c7cf;
+        font-size: 15px;
+        margin-top: 4px;
+      }
+
+      /* recent calls */
+      .call-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 18px;
+        padding: 12px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        opacity: 0;
+      }
+      .call-row:first-child {
+        border-top: none;
+      }
+      .call-tag {
+        color: #b0b0b8;
+        font-size: 15px;
+        margin-left: 10px;
+      }
+      .call-tag.flag {
+        color: #ef4444;
+      }
+      .call-dur {
+        color: #b0b0b8;
+        font-size: 15px;
+      }
+
+      /* outro */
+      #overlay {
+        position: absolute;
+        inset: 0;
+        background: #0a0a0a;
+        opacity: 0;
+      }
+      #outro {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+      }
+      #wordmark {
+        font-size: 84px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        opacity: 0;
+      }
+      #tagline {
+        font-size: 28px;
+        color: #c7c7cf;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-11xk" id="root" data-composition-id="main" data-start="0" data-duration="20.2" data-width="1920" data-height="1080">
+      <!-- hook: centered status card alone -->
+      <div data-hf-id="hf-m8dr" id="hook-wrap" class="clip" data-start="0" data-duration="4.9" data-track-index="0">
+        <div data-hf-id="hf-ms3x" class="status-card">
+          <div data-hf-id="hf-yeow">
+            <div data-hf-id="hf-rw9l" class="status-label">Agent phone number</div>
+            <div data-hf-id="hf-8mo2" class="status-number">+1 (415) 555-0128</div>
+          </div>
+          <div data-hf-id="hf-o5i7" class="status-right">
+            <div data-hf-id="hf-l9dc" class="status-dot"></div>
+            <div data-hf-id="hf-5rnx" class="status-online">Online</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- status bar: top-bar dashboard state -->
+      <div data-hf-id="hf-cnwc" id="status-wrap" class="clip" data-start="4.4" data-duration="13.9" data-track-index="0">
+        <div data-hf-id="hf-0jr5" class="status-card">
+          <div data-hf-id="hf-y7yw">
+            <div data-hf-id="hf-z0tp" class="status-label">Agent phone number</div>
+            <div data-hf-id="hf-q146" class="status-number">+1 (415) 555-0128</div>
+          </div>
+          <div data-hf-id="hf-zof3" class="status-right">
+            <div data-hf-id="hf-yn48" class="status-dot"></div>
+            <div data-hf-id="hf-q5q9" class="status-online">Online</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- dashboard grid shell: mounted 4.4 -> 18.3s -->
+      <div data-hf-id="hf-f2mc" id="grid" class="clip" data-start="4.4" data-duration="13.9" data-track-index="1">
+        <div data-hf-id="hf-7s1i" class="col">
+          <div data-hf-id="hf-05ph" id="transcript-card" class="card">
+            <div data-hf-id="hf-onlj" class="card-title"><span data-hf-id="hf-fhlw">Conversation transcript</span><span data-hf-id="hf-3ay2" class="live-tag">live</span></div>
+            <div data-hf-id="hf-8nhq" id="bubbles">
+              <div data-hf-id="hf-ok3q" class="bubble bubble-caller" id="b1">
+                <span data-hf-id="hf-4qf4" class="bubble-speaker">caller</span>Hi, it's Sarah from Meridian Recruiting, calling about the 2pm slot.
+              </div>
+              <div data-hf-id="hf-9j6e" class="bubble bubble-agent" id="b2">
+                <span data-hf-id="hf-6zt9" class="bubble-speaker">ai</span>Of course, let me check the calendar for you.
+              </div>
+              <div data-hf-id="hf-rtgd" class="bubble bubble-caller" id="b3">
+                <span data-hf-id="hf-firc" class="bubble-speaker">caller</span>Thursday at 2 works great, thanks!
+              </div>
+            </div>
+          </div>
+          <div data-hf-id="hf-z0mg" id="recent-card" class="card">
+            <div data-hf-id="hf-sjnb" class="card-title"><span data-hf-id="hf-af77">Recent calls</span></div>
+            <div data-hf-id="hf-tj4k" id="calls">
+              <div data-hf-id="hf-6vhl" class="call-row" id="c1"><span data-hf-id="hf-x93c">Sarah Chen <span data-hf-id="hf-8qyx" class="call-tag">interview</span></span><span data-hf-id="hf-h3lc" class="call-dur">1:04</span></div>
+              <div data-hf-id="hf-d17e" class="call-row" id="c2"><span data-hf-id="hf-dk8y">+1 555 0132 <span data-hf-id="hf-5835" class="call-tag">support</span></span><span data-hf-id="hf-zfas" class="call-dur">0:43</span></div>
+              <div data-hf-id="hf-l1aj" class="call-row" id="c3"><span data-hf-id="hf-9wpl">David Ortiz <span data-hf-id="hf-5vpj" class="call-tag">appointment</span></span><span data-hf-id="hf-fzlj" class="call-dur">0:51</span></div>
+              <div data-hf-id="hf-xjt0" class="call-row" id="c4"><span data-hf-id="hf-wct4">+1 555 0170 <span data-hf-id="hf-3fui" class="call-tag flag">scam flagged</span></span><span data-hf-id="hf-etmp" class="call-dur">0:22</span></div>
+            </div>
+          </div>
+        </div>
+        <div data-hf-id="hf-vmze" class="col">
+          <div data-hf-id="hf-swz8" id="caller-card" class="card">
+            <div data-hf-id="hf-s5ca" class="card-title"><span data-hf-id="hf-3i7o">Caller information</span></div>
+            <div data-hf-id="hf-0zi5" class="field" id="f-relation"><span data-hf-id="hf-3tij" class="field-label">Recruiter</span><span data-hf-id="hf-je0g" id="confidence">92% confidence</span></div>
+            <div data-hf-id="hf-dgcg" class="field field-sub" id="f-name">Sarah Chen</div>
+            <div data-hf-id="hf-f2uc" class="field field-sub" id="f-intent">Intent: Schedule interview call</div>
+          </div>
+          <div data-hf-id="hf-czuw" id="actions-card" class="card">
+            <div data-hf-id="hf-rr19" class="card-title"><span data-hf-id="hf-yby8">Actions</span></div>
+            <div data-hf-id="hf-6ux5" class="action-row" id="a1"><span data-hf-id="hf-gmbt">Book appointment</span><span data-hf-id="hf-n964" class="allowed-tag">allowed</span></div>
+            <div data-hf-id="hf-fdyf" id="summary"><strong data-hf-id="hf-nbqu">Call summary</strong>Booked Thursday 2:00 PM interview call, confirmed with Sarah Chen.</div>
+          </div>
+          <div data-hf-id="hf-hfd3" id="cal-card" class="card">
+            <div data-hf-id="hf-uj6g" class="card-title"><span data-hf-id="hf-p63x">Web Calendar</span></div>
+            <div data-hf-id="hf-yp5c" id="cal-event">
+              Interview — Sarah Chen
+              <div data-hf-id="hf-aayc" class="cal-when">Thu 2:00 PM – 2:30 PM</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- outro -->
+      <div data-hf-id="hf-jtts" id="overlay" class="clip" data-start="17.6" data-duration="2.6" data-track-index="2"></div>
+      <div data-hf-id="hf-dbx0" id="outro" class="clip" data-start="18.3" data-duration="1.9" data-track-index="3">
+        <div data-hf-id="hf-q0t6" id="wordmark">NeverMiss AI</div>
+        <div data-hf-id="hf-tgsj" id="tagline">Never miss the call that mattered.</div>
+      </div>
+
+      <audio data-hf-id="hf-51wv" id="bg-music" data-start="0" data-duration="20.2" data-track-index="10" data-automation="{&quot;version&quot;:1,&quot;lanes&quot;:[{&quot;target&quot;:&quot;volume&quot;,&quot;points&quot;:[{&quot;t&quot;:0,&quot;v&quot;:0.3},{&quot;t&quot;:19.2,&quot;v&quot;:0.3},{&quot;t&quot;:20.2,&quot;v&quot;:0}]}]}" src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"></audio>
+      <audio data-hf-id="hf-h2hy" id="sfx-b1" data-start="4.9" data-duration="0.12" data-track-index="11" data-volume="0.5" src="assets/sfx/impact/impactSoft_medium_000.ogg"></audio>
+      <audio data-hf-id="hf-aas1" id="sfx-b2" data-start="8.74" data-duration="0.2" data-track-index="12" data-volume="0.6" src="assets/sfx/impact/impactSoft_medium_001.ogg"></audio>
+      <audio data-hf-id="hf-m6ke" id="sfx-allowed" data-start="13.11" data-duration="0.13" data-track-index="13" data-volume="0.55" src="assets/sfx/interface/bong_001.ogg"></audio>
+      <audio data-hf-id="hf-rzou" id="sfx-wordmark" data-start="18.3" data-duration="0.15" data-track-index="14" data-volume="0.55" src="assets/sfx/impact/impactSoft_medium_004.ogg"></audio>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+
+      // ---- hook card in, then crossfade to dashboard top bar ----
+      tl.fromTo("#hook-wrap .status-card", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.out" }, 0);
+      tl.to("#hook-wrap", { opacity: 0, duration: 0.4, ease: "power1.in" }, 4.4);
+      tl.fromTo("#status-wrap", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" }, 4.4);
+
+      // ---- dashboard grid shell fade/slide in ----
+      tl.fromTo(
+        "#transcript-card, #recent-card, #caller-card, #actions-card, #cal-card",
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.05 },
+        4.4
+      );
+
+      // ---- transcript bubbles ----
+      tl.fromTo("#b1", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 4.9);
+      // beat-locked: 8.74s (strong cue, happy-beats-business-moves-vol-12)
+      tl.fromTo("#b2", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 8.74);
+      tl.fromTo("#b3", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 10.2);
+
+      // ---- caller info resolves ----
+      tl.fromTo("#f-relation", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" }, 5.3);
+      tl.fromTo("#f-name", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" }, 5.5);
+      const confidence = { v: 0 };
+      tl.to(
+        confidence,
+        {
+          v: 92,
+          duration: 0.8,
+          ease: "power1.out",
+          onUpdate: () => {
+            document.getElementById("confidence").textContent = Math.round(confidence.v) + "% confidence";
+          },
+        },
+        5.6
+      );
+      tl.fromTo("#f-intent", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" }, 7.0);
+
+      // ---- action approved, summary, calendar ----
+      // beat-locked: 13.11s (strong cue, happy-beats-business-moves-vol-12)
+      tl.fromTo("#a1", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 13.11);
+      tl.fromTo("#summary", { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power1.out" }, 13.6);
+      tl.fromTo("#cal-event", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, 14.4);
+
+      // ---- recent calls stack in ----
+      // beat-grid: c1 at 15.3s, c2 at 15.7s, c3 at 16.1s, c4 at 16.5s
+      tl.fromTo("#c1", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 15.3);
+      tl.fromTo("#c2", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 15.7);
+      tl.fromTo("#c3", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 16.1);
+      tl.fromTo("#c4", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 16.5);
+
+      // ---- outro ----
+      tl.fromTo("#overlay", { opacity: 0 }, { opacity: 1, duration: 0.7, ease: "power1.inOut" }, 17.6);
+      tl.fromTo("#wordmark", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 18.3);
+      tl.fromTo("#tagline", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.out" }, 19.1);
+
+      // music fade under the wordmark is authored via #bg-music's data-automation volume lane
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
