@@ -4,7 +4,7 @@
 <h2 align="center">Preview</h2>
 
 <p align="center">
-  <video src="nevermiss.mp4" width="500" controls></video>
+  <a href="nevermiss.mp4">▶ Watch preview (nevermiss.mp4)</a>
 </p>
 
 
